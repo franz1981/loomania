@@ -64,6 +64,7 @@ public final class SimplexNioTestCase {
                         }
 
                         public void wakeup() {
+                            // TODO check if consumeKey is being executed!!!!! IF not, there's no point to wakeup because we're already awaken!
                             selector.wakeup();
                         }
 
