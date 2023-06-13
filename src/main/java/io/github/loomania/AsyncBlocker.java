@@ -103,7 +103,7 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
         }
 
         private void sendBlockCommand() {
-            if (!COMMANDS.offer(this)) {
+            if (!COMMANDS.transferToPeer(this)) {
                 // try create a new thread for this; we don't care if is racy, really:
                 // at worse we would have more threads ready to pick this
                 createAndStartPoller(this);
@@ -147,10 +147,8 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
     private static final CopyOnWriteArrayList<Thread> EXECUTOR_SERVICES = new CopyOnWriteArrayList<>();
     private static final AtomicInteger POLLERS = new AtomicInteger(0);
 
-    // TODO This is GC "intensive"! We could cache the "consumer" node and use a mpmc queue
-    // - a consumer ready to consume would offer itself to the queue and park awaiting to be picked
-    // - a blocker caller poll in such queue to check if there's someone available and unpark it, if any
-    private static final SynchronousQueue<Runnable> COMMANDS = new SynchronousQueue<>();
+    // This can be easily replaced by a SynchronousQueue which provide a similar semantic
+    private static final SynchronousRandevouz<Runnable> COMMANDS = new SynchronousRandevouz<>();
 
     static {
         for (int i = 0; i < CORE_SIZE; i++) {
@@ -169,11 +167,12 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
                 if (first != null) {
                     first.run();
                 }
+                var me = new SynchronousRandevouz.Peer<Runnable>();
                 for (; ; ) {
-                    final Runnable cmd = COMMANDS.take();
+                    final Runnable cmd = COMMANDS.offerPeerAndTake(me);
                     cmd.run();
                 }
-            } catch (InterruptedException ignore) {
+            } catch (Throwable ignore) {
                 // NOOP
             } finally {
                 POLLERS.decrementAndGet();
