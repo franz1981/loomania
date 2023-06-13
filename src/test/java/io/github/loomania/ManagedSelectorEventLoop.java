@@ -7,7 +7,7 @@ import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class ManagedSelectorEventLoop implements Executor, AutoCloseable {
+public class ManagedSelectorEventLoop implements EventLoopExecutor {
 
     private static class Keys implements AsyncBlocker.Result {
 

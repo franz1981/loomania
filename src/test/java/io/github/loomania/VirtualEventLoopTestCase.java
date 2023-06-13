@@ -2,13 +2,35 @@ package io.github.loomania;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Stream;
 
-public class LocalEventLoopTestCase {
+public class VirtualEventLoopTestCase {
+
+    private static Stream<Arguments> setupEventLoop() {
+        final Arguments virtual;
+        {
+            var eventLoop = new VirtualLocalEventLoop();
+            var vtExecutorService = LoomaniaController.newEventLoopExecutorService(Thread::new,
+                    eventLoop::wakeup, eventLoop::eventLoop, ExecutorServiceListener.EMPTY);
+            virtual = Arguments.of(vtExecutorService, eventLoop);
+        }
+        final Arguments managed;
+        {
+            var builder = Loomania.newJdkVirtualThreadExecutorBuilder().setCorePoolSize(1);
+            var vtExecutorService = builder.build();
+            var eventLoop = new ManagedSelectorEventLoop(vtExecutorService);
+            managed = Arguments.of(vtExecutorService, eventLoop);
+        }
+        return Stream.of(virtual, managed);
+    }
 
     @Test
     public void eventLoopFJ() throws InterruptedException {
@@ -23,19 +45,16 @@ public class LocalEventLoopTestCase {
         }
     }
 
-    @Test
-    public void shouldYieldBeFair() throws InterruptedException, ExecutionException {
+    @ParameterizedTest(name = "{index} => {1}")
+    @MethodSource("setupEventLoop")
+    public void shouldYieldBeFair(ExecutorService virtualExecutor, EventLoopExecutor eventLoop) throws InterruptedException, ExecutionException {
         var lock = new ReentrantLock(true);
-        var eventLoop = new VirtualLocalEventLoop();
-        var loomania = LoomaniaController.newEventLoopExecutorService(Thread::new,
-                eventLoop::wakeup, eventLoop::eventLoop, ExecutorServiceListener.EMPTY);
-
         var acquisitionOrder = new AtomicInteger();
         var eventLoopLockOrder = new CompletableFuture<Integer>();
         var loomaniaLockOrder = new CompletableFuture<Integer>();
         lock.lock();
         eventLoop.execute(() -> {
-            loomania.execute(() -> {
+            virtualExecutor.execute(() -> {
                 lock.lock();
                 var order = acquisitionOrder.incrementAndGet();
                 lock.unlock();
@@ -53,22 +72,19 @@ public class LocalEventLoopTestCase {
         Assertions.assertEquals(1, eventLoopLockOrder.get());
         Assertions.assertEquals(2, loomaniaLockOrder.get());
         eventLoop.close();
-        loomania.close();
+        virtualExecutor.close();
     }
 
-    @Test
-    public void shouldNotDeadlock() throws InterruptedException {
+    @ParameterizedTest(name = "{index} => {1}")
+    @MethodSource("setupEventLoop")
+    public void shouldNotDeadlock(ExecutorService virtualExecutor, EventLoopExecutor eventLoop) throws InterruptedException {
         var lock = new ReentrantLock(true);
         var lockAcquired = new CompletableFuture<Boolean>();
         var bothAcquireAndRelease = new CountDownLatch(2);
 
-        var eventLoop = new VirtualLocalEventLoop();
-        var loomania = LoomaniaController.newEventLoopExecutorService(Thread::new,
-                eventLoop::wakeup, eventLoop::eventLoop, ExecutorServiceListener.EMPTY);
-
         lock.lock();
         eventLoop.execute(() -> {
-            loomania.execute(() -> {
+            virtualExecutor.execute(() -> {
                 eventLoop.execute(() -> {
                     assert lock.isLocked();
                     lock.lock();
@@ -92,19 +108,17 @@ public class LocalEventLoopTestCase {
             bothAcquireAndRelease.await();
         }
         eventLoop.close();
-        loomania.close();
+        virtualExecutor.close();
     }
 
-    @Test
-    public void eventLoopLoomania() throws InterruptedException {
-        var eventLoop = new VirtualLocalEventLoop();
-        var loomania = LoomaniaController.newEventLoopExecutorService(Thread::new,
-                     eventLoop::wakeup, eventLoop::eventLoop, ExecutorServiceListener.EMPTY);
+    @ParameterizedTest(name = "{index} => {1}")
+    @MethodSource("setupEventLoop")
+    public void eventLoopLoomania(ExecutorService virtualExecutor, EventLoopExecutor eventLoop) throws InterruptedException {
         final var done = new CountDownLatch(1);
         eventLoop.execute(() -> {
             System.out.println("ISSUING A V THREAD BLOCKING CALL");
             // emulate a rest endpoint that can issue a blocking call
-            loomania.execute(() -> {
+            virtualExecutor.execute(() -> {
                 try {
                     done.await();
                     System.out.println("DONE ON V THREAD");
@@ -124,6 +138,6 @@ public class LocalEventLoopTestCase {
         });
         done.await();
         eventLoop.close();
-        loomania.close();
+        virtualExecutor.close();
     }
 }

@@ -9,7 +9,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
-public final class VirtualLocalEventLoop implements Executor, AutoCloseable {
+public final class VirtualLocalEventLoop implements EventLoopExecutor {
 
     public enum State {
         NOT_STARTED,

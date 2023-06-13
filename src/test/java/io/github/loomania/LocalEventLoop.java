@@ -7,7 +7,7 @@ import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-public final class LocalEventLoop implements Executor, AutoCloseable {
+public final class LocalEventLoop implements EventLoopExecutor {
 
     public enum State {
         NOT_STARTED,
