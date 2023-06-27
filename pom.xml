@@ -35,13 +35,12 @@
             <version>5.9.0</version>
             <scope>test</scope>
         </dependency>
-        <!--
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
             <version>${version.jmh}</version>
             <scope>test</scope>
-        </dependency>-->
+        </dependency>
     </dependencies>
 
     <name>Loomania</name>
@@ -95,23 +94,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.maven-compiler-plugin}</version>
                 <executions>
-                    <!-- jmh -->
-                    <!--
-                    <execution>
-                        <goals>
-                            <goal>testCompile</goal>
-                        </goals>
-                        <configuration>
-                            <annotationProcessorPaths>
-                                <path>
-                                    <groupId>org.openjdk.jmh</groupId>
-                                    <artifactId>jmh-generator-annprocess</artifactId>
-                                    <version>${version.jmh}</version>
-                                </path>
-                            </annotationProcessorPaths>
-                        </configuration>
-                    </execution>
-                    -->
                     <execution>
                         <id>default-compile</id>
                         <configuration>
@@ -130,6 +112,13 @@
                             <compilerArgs>
                                 <compilerArg>--enable-preview</compilerArg>
                             </compilerArgs>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.openjdk.jmh</groupId>
+                                    <artifactId>jmh-generator-annprocess</artifactId>
+                                    <version>${version.jmh}</version>
+                                </path>
+                            </annotationProcessorPaths>
                         </configuration>
                     </execution>
                     <execution>
@@ -224,7 +213,6 @@
                 </executions>
             </plugin>
             <!-- Required for JMH -->
-            <!--
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -269,7 +257,7 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>-->
+            </plugin>
         </plugins>
     </build>
 
