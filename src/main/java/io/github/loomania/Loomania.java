@@ -1,6 +1,7 @@
 package io.github.loomania;
 
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 
 /**
  * Access to Loom internals for experimental munging (approach #2).
@@ -26,6 +27,21 @@ public final class Loomania {
     public static boolean isInstalled() {
         return installed;
     }
+
+    /**
+     * Create a single-threaded virtual thread executor service which uses an event loop to schedule tasks.
+     *
+     * @param carrier the context to propagate to virtual threads, or {@code null} for none
+     * @param wakeup the wakeup call used to awake a blocked carrier
+     * @param eventLoopBody the main event loop body which should use {@link VirtualEventLoopContext} to control it
+     * @param listener the executor service listener (must not be {@code null}, may be {@link ExecutorServiceListener#EMPTY})
+     * @return the new executor service (not {@code null})
+     */
+    public static ExecutorService newEventLoopExecutorService(ScopedValue_Temporary.Carrier carrier, Runnable wakeup, Consumer<? super VirtualEventLoopContext> eventLoopBody, ExecutorServiceListener listener) {
+        if (! installed) throw Nope.nope();
+        return LoomaniaCooperativeImpl.newEventLoopExecutorService(carrier, wakeup, eventLoopBody, listener);
+    }
+
 
     /**
      * Create a single-threaded virtual thread executor service which uses an event loop to schedule tasks.

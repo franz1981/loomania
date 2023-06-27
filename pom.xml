@@ -22,6 +22,10 @@
         <version.maven-surefire-plugin>2.22.2</version.maven-surefire-plugin>
         <version.nexus-staging-maven-plugin>1.6.7</version.nexus-staging-maven-plugin>
         <version.versions-maven-plugin>2.9.0</version.versions-maven-plugin>
+        <!-- Required for JMH -->
+        <version.maven-assembly-plugin>3.3.0</version.maven-assembly-plugin>
+        <version.maven-build-helper-plugin>3.4.0</version.maven-build-helper-plugin>
+        <version.jmh>1.36</version.jmh>
     </properties>
 
     <dependencies>
@@ -31,6 +35,13 @@
             <version>5.9.0</version>
             <scope>test</scope>
         </dependency>
+        <!--
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>${version.jmh}</version>
+            <scope>test</scope>
+        </dependency>-->
     </dependencies>
 
     <name>Loomania</name>
@@ -84,12 +95,30 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.maven-compiler-plugin}</version>
                 <executions>
+                    <!-- jmh -->
+                    <!--
+                    <execution>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.openjdk.jmh</groupId>
+                                    <artifactId>jmh-generator-annprocess</artifactId>
+                                    <version>${version.jmh}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </execution>
+                    -->
                     <execution>
                         <id>default-compile</id>
                         <configuration>
-                            <source>19</source>
-                            <target>19</target>
+                            <source>21</source>
+                            <target>21</target>
                             <compilerArgs>
+                                <compilerArg>--enable-preview</compilerArg>
                                 <compilerArg>--add-exports=java.base/jdk.internal.vm=ALL-UNNAMED</compilerArg>
                             </compilerArgs>
                         </configuration>
@@ -97,7 +126,10 @@
                     <execution>
                         <id>default-testCompile</id>
                         <configuration>
-                            <release>19</release>
+                            <release>21</release>
+                            <compilerArgs>
+                                <compilerArg>--enable-preview</compilerArg>
+                            </compilerArgs>
                         </configuration>
                     </execution>
                     <execution>
@@ -191,6 +223,53 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Required for JMH -->
+            <!--
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${version.maven-build-helper-plugin}</version>
+                <executions>
+                    <execution>
+                        <id>add-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/test/jmh</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>${version.maven-assembly-plugin}</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/jmh-tests.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <attach>true</attach>
+                            <archive>
+                                <manifest>
+                                    <mainClass>org.openjdk.jmh.Main</mainClass>
+                                </manifest>
+                            </archive>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>-->
         </plugins>
     </build>
 

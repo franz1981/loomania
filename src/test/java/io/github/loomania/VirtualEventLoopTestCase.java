@@ -18,7 +18,7 @@ public class VirtualEventLoopTestCase {
         final Arguments virtual;
         {
             var eventLoop = new VirtualLocalEventLoop();
-            var vtExecutorService = LoomaniaController.newEventLoopExecutorService(Thread::new,
+            var vtExecutorService = Loomania.newEventLoopExecutorService(null,
                     eventLoop::wakeup, eventLoop::eventLoop, ExecutorServiceListener.EMPTY);
             virtual = Arguments.of(vtExecutorService, eventLoop);
         }

@@ -123,7 +123,7 @@ final class LoomaniaImpl {
         return new VirtualThreadExecutorService(carrier, factory, delegate, listener);
     }
 
-    private static Thread.Builder.OfVirtual newVirtualThreadFactory(Executor executor) {
+    static Thread.Builder.OfVirtual newVirtualThreadFactory(Executor executor) {
         try {
             return (Thread.Builder.OfVirtual) virtualThreadFactory.invokeExact(executor);
         } catch (RuntimeException | Error e) {
