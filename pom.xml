@@ -121,6 +121,7 @@
                             </annotationProcessorPaths>
                         </configuration>
                     </execution>
+                    <!--
                     <execution>
                         <id>java11-recompile</id>
                         <phase>compile</phase>
@@ -133,7 +134,7 @@
                                 <exclude>io/github/loomania/LoomaniaImpl.java</exclude>
                             </excludes>
                         </configuration>
-                    </execution>
+                    </execution>-->
                 </executions>
             </plugin>
             <plugin>
@@ -257,6 +258,14 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>14</source>
+                    <target>14</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>

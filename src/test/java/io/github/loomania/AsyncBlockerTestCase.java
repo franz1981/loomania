@@ -8,7 +8,7 @@ import java.nio.channels.Selector;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class AsyncBlockerTest {
+public class AsyncBlockerTestCase {
 
     private static class MutableRef<T> implements AsyncBlocker.Result {
 
@@ -17,6 +17,22 @@ public class AsyncBlockerTest {
         @Override
         public void close() {
             ref = null;
+        }
+    }
+
+    @Test
+    public void shouldNotCreateNewPollersIfThereAreEnoughAvailable() throws ExecutionException, InterruptedException {
+        try (var vExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 0; i < 10; i++) {
+                var blockResult = vExecutor.submit(() -> {
+                    var blocker = AsyncBlocker.create(new MutableRef<Boolean>(), (delay, unit, result) -> {
+                        result.ref = true;
+                    });
+                    return blocker.block();
+                });
+                Assertions.assertNotNull(blockResult.get());
+                Assertions.assertEquals(1, AsyncBlocker.pollersAlive(), "Errored while on " + (i + 1) + " attempt");
+            }
         }
     }
 

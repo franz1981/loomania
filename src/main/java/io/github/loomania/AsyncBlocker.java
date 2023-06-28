@@ -103,7 +103,7 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
         }
 
         private void sendBlockCommand() {
-            if (!COMMANDS.transferToPeer(this)) {
+            if (!COMMANDS.offer(this)) {
                 // try create a new thread for this; we don't care if is racy, really:
                 // at worse we would have more threads ready to pick this
                 createAndStartPoller(this);
@@ -113,12 +113,11 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
         private Try<R> sendBlockCommandAndWaitUntilUnparked() {
             assert parked != null;
             sendBlockCommand();
-            // let'ts
-            do {
+            // let's try check this first; if lucky no park is required at all
+            while (parked != null) {
                 // can spurious wakeup :"(: we need to be sure that we have been unblocked for real!
                 LockSupport.park();
-                // TODO check for current interruption?
-            } while (parked != null);
+            }
             tryResult.expectClose();
             return tryResult;
         }
@@ -141,19 +140,23 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
         }
     }
 
-    private static final int CORE_SIZE = Runtime.getRuntime().availableProcessors();
+    private static final int CORE_SIZE = 0;
 
     // TODO we can use both these for monitoring purposes
     private static final CopyOnWriteArrayList<Thread> EXECUTOR_SERVICES = new CopyOnWriteArrayList<>();
     private static final AtomicInteger POLLERS = new AtomicInteger(0);
 
     // This can be easily replaced by a SynchronousQueue which provide a similar semantic
-    private static final SynchronousRandevouz<Runnable> COMMANDS = new SynchronousRandevouz<>();
+    private static final SynchronousQueue<Runnable> COMMANDS = new SynchronousQueue<>();
 
     static {
         for (int i = 0; i < CORE_SIZE; i++) {
             EXECUTOR_SERVICES.add(createAndStartPoller());
         }
+    }
+
+    static int pollersAlive() {
+        return POLLERS.get();
     }
 
     private static Thread createAndStartPoller() {
@@ -167,9 +170,8 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
                 if (first != null) {
                     first.run();
                 }
-                var me = new SynchronousRandevouz.Peer<Runnable>();
                 for (; ; ) {
-                    final Runnable cmd = COMMANDS.offerPeerAndTake(me);
+                    final Runnable cmd = COMMANDS.take();
                     cmd.run();
                 }
             } catch (Throwable ignore) {
