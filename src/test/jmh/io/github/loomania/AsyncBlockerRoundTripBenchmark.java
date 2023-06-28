@@ -11,6 +11,8 @@ import java.util.concurrent.*;
 @Warmup(iterations = 10, time = 400, timeUnit = TimeUnit.MILLISECONDS)
 @Measurement(iterations = 10, time = 400, timeUnit = TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class AsyncBlockerRoundTripBenchmark {
 
     private AsyncBlocker<SelectorResult> safeSelector;
@@ -84,6 +86,18 @@ public class AsyncBlockerRoundTripBenchmark {
     public int loomaniaSafeSelectAlreadyAwaken() {
         selector.wakeup();
         try (var tryResult = safeSelector.block()) {
+            int keys = tryResult.result().keys;
+            if (keys > 0) {
+                Blackhole.consumeCPU(keys);
+            }
+            return keys;
+        }
+    }
+
+    @Benchmark
+    public int loomaniaSafeSelectAlreadyAwakenSpinWait() {
+        selector.wakeup();
+        try (var tryResult = safeSelector.block(true)) {
             int keys = tryResult.result().keys;
             if (keys > 0) {
                 Blackhole.consumeCPU(keys);

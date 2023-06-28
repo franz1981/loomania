@@ -110,25 +110,29 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
             }
         }
 
-        private Try<R> sendBlockCommandAndWaitUntilUnparked() {
+        private Try<R> sendBlockCommandAndWaitUntilUnparked(boolean spinWait) {
             assert parked != null;
             sendBlockCommand();
             // let's try check this first; if lucky no park is required at all
             while (parked != null) {
-                // can spurious wakeup :"(: we need to be sure that we have been unblocked for real!
-                LockSupport.park();
+                if (spinWait) {
+                    Thread.onSpinWait();
+                } else {
+                    // can spurious wakeup :"(: we need to be sure that we have been unblocked for real!
+                    LockSupport.park();
+                }
             }
             tryResult.expectClose();
             return tryResult;
         }
 
-        public Try<R> managedBlock() {
+        public Try<R> managedBlock(boolean spinWait) {
             tryResult.checkExpectClosed();
             markCurrentThreadAsParked();
-            return sendBlockCommandAndWaitUntilUnparked();
+            return sendBlockCommandAndWaitUntilUnparked(spinWait);
         }
 
-        public Try<R> managedBlock(long delay, TimeUnit unit) {
+        public Try<R> managedBlock(long delay, TimeUnit unit, boolean spinWait) {
             if (delay < 0 || unit == null) {
                 throw new IllegalArgumentException("delay must be greater or equal zero and unit not null");
             }
@@ -136,7 +140,7 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
             markCurrentThreadAsParked();
             this.delay = delay;
             this.unit = unit;
-            return sendBlockCommandAndWaitUntilUnparked();
+            return sendBlockCommandAndWaitUntilUnparked(spinWait);
         }
     }
 
@@ -191,11 +195,19 @@ public final class AsyncBlocker<R extends AsyncBlocker.Result> {
     }
 
     public Try<R> block(long delay, TimeUnit unit) {
-        return command.managedBlock(delay, unit);
+        return block(delay, unit, false);
     }
 
     public Try<R> block() {
-        return command.managedBlock();
+        return block(false);
+    }
+
+    Try<R> block(boolean spinWait) {
+        return command.managedBlock(spinWait);
+    }
+
+    Try<R> block(long delay, TimeUnit unit, boolean spinWait) {
+        return command.managedBlock(delay, unit, spinWait);
     }
 
     public static <R extends Result> AsyncBlocker<R> create(R result, BlockWithTimeout<R> block) {
